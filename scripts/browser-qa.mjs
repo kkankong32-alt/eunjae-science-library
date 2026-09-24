@@ -1,0 +1,24 @@
+import {chromium} from 'playwright';
+import {mkdir,writeFile,readFile} from 'node:fs/promises';
+import assert from 'node:assert/strict';
+const browser=await chromium.launch({channel:'msedge',headless:true});
+await mkdir('test-results',{recursive:true});const errors=[],results=[];
+const context=await browser.newContext({viewport:{width:1366,height:768}}),page=await context.newPage();
+page.on('pageerror',e=>errors.push(e.message));
+await page.goto('http://127.0.0.1:4173');await page.screenshot({path:'test-results/welcome-desktop.png',fullPage:true});
+await page.getByRole('button',{name:'로컬 라이브러리 체험하기'}).click();await page.locator('.book-card').last().waitFor();await page.locator('.cover-button img').evaluateAll(es=>es.forEach(e=>e.loading='eager'));await page.waitForFunction(()=>[...document.querySelectorAll('.cover-button img')].every(i=>i.complete&&i.naturalWidth>0));
+const count=await page.locator('.book-card').count();assert.equal(count,JSON.parse(await readFile('.private/library.json','utf8')).length);results.push(`실제 도서 ${count}개 표시 / 모든 SVG 정상 로드`);
+await page.screenshot({path:'test-results/home-desktop.png',fullPage:true});
+await page.getByRole('searchbox').fill('space');assert.equal(await page.locator('.book-card').count(),1);await page.getByRole('searchbox').fill('존재하지않는검색어');assert.equal(await page.locator('.book-card').count(),0);await page.getByRole('button',{name:'전체 책 보기'}).click();results.push('검색 / 검색 결과 없음 / 전체 복귀 통과');
+await page.locator('[data-favorite="001"]').click();await page.getByRole('button',{name:'즐겨찾기',exact:true}).click();assert.equal(await page.locator('.book-card').count(),1);await page.getByRole('button',{name:'전체 책',exact:true}).click();
+await page.locator('[data-play="001"]').last().click();await page.waitForFunction(()=>document.querySelector('#mini-player [data-action="toggle"]').getAttribute('aria-label')==='일시정지',{timeout:15000});
+await page.waitForTimeout(1500);await page.locator('#mini-player [data-action="toggle"]').click();
+await page.locator('#open-player').click();assert.equal(await page.locator('#full-player').evaluate(e=>e.open),true);
+await page.locator('#full-player .seek').fill('60');await page.locator('#full-player .seek').dispatchEvent('change');await page.waitForTimeout(250);assert.equal(await page.locator('#full-player .current-time').textContent(),'1:00');
+await page.getByRole('button',{name:'10초 앞으로'}).click();assert.equal(await page.locator('#full-player .current-time').textContent(),'1:10');await page.getByRole('button',{name:'10초 뒤로'}).click();assert.equal(await page.locator('#full-player .current-time').textContent(),'1:00');
+await page.screenshot({path:'test-results/player-desktop.png'});await page.getByRole('button',{name:'플레이어 닫기'}).click();
+await page.reload();await page.getByRole('button',{name:'로컬 라이브러리 체험하기'}).click();await page.locator('.book-card').last().waitFor();assert.equal(await page.locator('[data-favorite="001"]').getAttribute('aria-pressed'),'true');assert.ok((await page.locator('#featured').textContent()).includes('1:00'));
+await page.locator('#featured [data-play]').click();await page.waitForFunction(()=>document.querySelector('#mini-player .current-time').textContent.startsWith('1:'));await page.locator('#mini-player [data-action="next"]').click();await page.waitForFunction(()=>document.querySelector('#mini-title').textContent.includes('Trees'));await page.locator('#mini-player [data-action="previous"]').click();await page.waitForFunction(()=>document.querySelector('#mini-title').textContent.includes('Dog'));results.push('실제 MP3 재생·일시정지·seek·±10초·이전/다음·이어듣기·즐겨찾기 저장 통과');
+for(const [name,width,height]of [['mobile',375,812],['large-mobile',430,932],['tablet',768,1024],['desktop',1920,1080]]){await page.setViewportSize({width,height});await page.waitForTimeout(150);const overflow=await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth);assert.equal(overflow,false,`${name} overflow`);await page.screenshot({path:`test-results/home-${name}.png`,fullPage:true});results.push(`${name} ${width}×${height} 가로 넘침 없음`);if(name==='mobile'){await page.locator('#open-player').click();await page.screenshot({path:'test-results/player-mobile.png'});await page.getByRole('button',{name:'플레이어 닫기'}).click();}}
+await page.locator('#profile').click();await page.getByRole('button',{name:'로그아웃',exact:true}).click();assert.equal(await page.locator('#books').textContent(),'');await page.setViewportSize({width:375,height:812});await page.screenshot({path:'test-results/welcome-mobile.png',fullPage:true});results.push('로그아웃 시 목록/플레이어 제거');
+assert.deepEqual(errors,[]);results.push('브라우저 JavaScript 오류 0건');await writeFile('test-results/browser-results.json',JSON.stringify({results,errors},null,2));console.log(results.join('\n'));await browser.close();

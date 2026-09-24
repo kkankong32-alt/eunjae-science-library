@@ -1,0 +1,19 @@
+{
+  "name": "eunjae-science-library",
+  "version": "2.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node scripts/dev-server.mjs",
+    "scan": "node scripts/scan-library.mjs",
+    "covers": "node scripts/generate-covers.mjs",
+    "build": "node scripts/build.mjs",
+    "test": "node --test tests/*.test.mjs",
+    "test:browser": "node scripts/browser-qa.mjs"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.0",
+    "music-metadata": "^11.0.0",
+    "playwright": "^1.55.0"
+  }
+}

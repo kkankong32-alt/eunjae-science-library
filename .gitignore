@@ -1,0 +1,13 @@
+node_modules/
+dist/
+.demo-dist/
+.private/
+*.mp3
+*.MP3
+*.dab
+*.DP
+*service-account*.json
+*credentials*.json
+.env
+*-debug.log
+test-results/
