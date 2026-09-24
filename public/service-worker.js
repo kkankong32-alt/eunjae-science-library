@@ -1,7 +1,7 @@
 // Tokens and media live only in memory. Never cache a Drive response or a session.
-const CACHE='eunjae-drive-shell-v2';
+const CACHE='eunjae-drive-shell-v3';
 const scope=new URL(self.registration.scope);
-const SHELL=['./','index.html','styles.css','app.js','config.js','manifest.webmanifest','assets/icon.svg','assets/icon-192.png','assets/icon-512.png'].map(p=>new URL(p,scope).href);
+const SHELL=['./','index.html','styles.css','app.js','config.js?v=oauth-1','manifest.webmanifest','assets/icon.svg','assets/icon-192.png','assets/icon-512.png'].map(p=>new URL(p,scope).href);
 const sessions=new Map(),pending=new Map();
 self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(SHELL)).then(()=>self.skipWaiting())));
 self.addEventListener('activate',event=>event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>(k.startsWith('eunjae-shell-')||k.startsWith('eunjae-drive-shell-'))&&k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
